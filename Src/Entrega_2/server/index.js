@@ -1,39 +1,13 @@
-import express from 'express'
-import cors from 'cors'
-import pool from './config/db.js'
-import authRoutes from './routes/authRoutes.js'
-import eventoRoutes from './routes/eventoRoutes.js'
-import propostaRoutes from './routes/propostaRoutes.js'
-import adminRoutes from './routes/adminRoutes.js'
-import { tratarErros } from './middlewares/erros.js'
-const app = express()
+import app from './app.js'
+import { testarConexao } from './config/db.js'
+
+// Servidor local (npm start / npm run dev). Na Vercel quem roda é o api/index.js.
 // em produção a plataforma de hospedagem define a porta pela variável PORT; localmente continua 3000
 const port = process.env.PORT || 3000
 
-// Middleware: permite que o frontend (outra porta) acesse o backend
-app.use(cors())
-// Middleware: permite ler o corpo da requisição como JSON
-// Sem isso, req.body chega undefined
-app.use(express.json())
-
-// Rota de teste
-app.get('/', (req, res) => {
-    res.send('servidor rodando')
-})
-
-// Registra todas as rotas de auth com o prefixo /api
-app.use('/api', authRoutes)
-
-// Registra as rotas de evento com o prefixo /api
-app.use('/api', eventoRoutes)
-
-// Registra as rotas relacionadas ao admin com o prefixo /api
-app.use('/api', adminRoutes)
-
-app.use('/api/propostas', propostaRoutes)
-app.use(tratarErros)
+// Testa o banco ao iniciar; se falhar, encerra com a dica do erro
+await testarConexao({ encerrarSeFalhar: true })
 
 app.listen(port, () => {
     console.log(`backend rodando na porta ${port}`)
 })
-
