@@ -1,0 +1,174 @@
+import { useState } from 'react';
+import {
+  ActionRow,
+  CurrencyInput,
+  Field,
+  FormCard,
+  Input,
+} from '../components/FormUI.jsx';
+
+export function AudienceLots({ data, setData, onBack, onNext }) {
+  const [errors, setErrors] = useState({});
+
+  const patch = (key) => (e) => {
+    setData((prev) => ({ ...prev, [key]: e.target.value }));
+    setErrors((prev) => ({ ...prev, [key]: '' }));
+  };
+
+  const handleNext = () => {
+    const nextErrors = {};
+
+    const validate = (value, required, pattern) => {
+      const text = String(value ?? '').trim();
+
+      if (!text) return required ? 'Campo obrigatório.' : null;
+      if (!pattern.test(text)) return 'caractere invalido.';
+
+      return null;
+    };
+
+    // Preços: aceita 50, 50,00 ou 50.00
+    const pricePattern = /^\d+(?:[.,]\d{1,2})?$/;
+
+    // Público: aceita apenas números inteiros
+    const audiencePattern = /^\d+$/;
+
+    const validations = {
+      firstLot: validate(data.firstLot, true, pricePattern),
+      secondLot: validate(data.secondLot, false, pricePattern),
+      minAudience: validate(data.minAudience, false, audiencePattern),
+      maxAudience: validate(data.maxAudience, true, audiencePattern),
+      // margem de lucro (%) usada no cálculo do ticket; vazio = 0
+      margin: validate(data.margin, false, pricePattern),
+    };
+
+    Object.entries(validations).forEach(([field, error]) => {
+      if (error) nextErrors[field] = error;
+    });
+
+    for (const field of ['firstLot', 'secondLot']) {
+      const text = String(data[field] ?? '').trim();
+      if (
+        !nextErrors[field] &&
+        text &&
+        Number(text.replace(',', '.')) > 99999999.99
+      ) {
+        nextErrors[field] = 'O preço máximo é R$ 99.999.999,99.';
+      }
+    }
+
+    for (const field of ['minAudience', 'maxAudience']) {
+      if (!nextErrors[field] && Number(data[field]) > 1000000000) {
+        nextErrors[field] =
+          'O público não pode ultrapassar 1 bilhão de pessoas.';
+      }
+    }
+
+    if (!nextErrors.maxAudience && Number(data.maxAudience) < 1) {
+      nextErrors.maxAudience = 'O público máximo deve ser pelo menos 1.';
+    }
+
+    if (!nextErrors.margin && Number(String(data.margin ?? '').replace(',', '.')) >= 100) {
+      nextErrors.margin = 'A margem deve ser menor que 100%.';
+    }
+
+    const hasMinAudience = String(data.minAudience ?? '').trim() !== '';
+
+    if (
+      hasMinAudience &&
+      !nextErrors.minAudience &&
+      !nextErrors.maxAudience &&
+      Number(data.minAudience) > Number(data.maxAudience)
+    ) {
+      nextErrors.minAudience =
+        'O público mínimo não pode ser maior que o público máximo.';
+    }
+
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length === 0) onNext();
+  };
+
+  return (
+    <FormCard
+      eyebrow="Etapa 2 de 4"
+      title="Público e Lotes"
+      subtitle="Defina capacidade, quantidade disponível e o preço inicial dos ingressos."
+      footer={
+        <ActionRow onBack={onBack} onNext={handleNext} backLabel="Voltar" />
+      }
+    >
+      <div className="form-grid two-cols">
+        <Field
+          label="Preço do lote inicial (R$)"
+          required
+          error={errors.firstLot}
+          hint="Preço de abertura das vendas."
+        >
+          <CurrencyInput
+            value={data.firstLot}
+            onChange={patch('firstLot')}
+            placeholder="50,00"
+          />
+        </Field>
+
+        <Field
+          label="Preço do segundo lote (R$)"
+          error={errors.secondLot}
+          hint="Opcional. Você pode ajustar depois."
+        >
+          <CurrencyInput
+            value={data.secondLot}
+            onChange={patch('secondLot')}
+            placeholder="100,00"
+          />
+        </Field>
+
+        <Field label="Público mínimo" error={errors.minAudience}>
+          <Input
+            type="text"
+            inputMode="numeric"
+            value={data.minAudience ?? ''}
+            onChange={patch('minAudience')}
+            placeholder="Ex: 300"
+          />
+        </Field>
+
+        <Field label="Público máximo" required error={errors.maxAudience}>
+          <Input
+            type="text"
+            inputMode="numeric"
+            value={data.maxAudience ?? ''}
+            onChange={patch('maxAudience')}
+            placeholder="Ex: 2000"
+          />
+        </Field>
+      </div>
+
+      <div className="form-grid two-cols">
+        <Field
+          label="Margem de lucro (%)"
+          error={errors.margin}
+          hint="Opcional. Percentual da receita usado no cálculo do ticket. Você pode ajustar depois."
+        >
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={data.margin ?? ''}
+            onChange={patch('margin')}
+            placeholder="Ex: 15"
+          />
+        </Field>
+      </div>
+
+      <div className="info-banner">
+        <span className="info-icon">i</span>
+        <p>
+          O público máximo também pode ser usado como limite inicial de
+          ingressos. Depois você poderá dividir a quantidade por lotes e
+          setores.
+        </p>
+      </div>
+    </FormCard>
+  );
+}
