@@ -14,7 +14,7 @@ const app = express()
 // Origens que podem chamar a API. Em produção, defina CORS_ORIGIN na Vercel
 // (várias separadas por vírgula). Sem a variável, libera o frontend publicado e o Vite local.
 const origensPermitidas = (process.env.CORS_ORIGIN ||
-    'https://trocaticket-six.vercel.app,http://localhost:5173,http://127.0.0.1:5173')
+    'https://troca-ticket.vercel.app,http://localhost:5173,http://127.0.0.1:5173')
     .split(',')
     .map((origem) => origem.trim().replace(/\/$/, ''))
     .filter(Boolean)
